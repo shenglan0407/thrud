@@ -7,6 +7,8 @@ from mdtraj import io
 from mdtraj.utils import ensure_type
 import BasisGrid
 
+import math2
+
 class Beam(object):
     """
     Class that converts energies, wavelengths, frequencies, and wavenumbers.
