@@ -93,11 +93,8 @@ class InterpSimple:
                         mask, bin_fac):
     
         # check if shape of image are integer multiples of bin_fac
-        if image.shape[0]%bin_fac and image.shape[1]%bin_fac:
+	if image.shape[0]%bin_fac or image.shape[1]%bin_fac:
             img = ma.MaskedArray(image, mask = ~mask.astype(bool))
-            
-        else:
-
             x = int ( ( int(image.shape[0]/bin_fac)+1)  * bin_fac)
             y = int( ( int(image.shape[1]/bin_fac)+1)  * bin_fac)
             new_img = np.zeros((x,y), dtype = np.float64)
@@ -107,6 +104,10 @@ class InterpSimple:
             new_mask[:image.shape[0],:image.shape[1]] = mask
             
             img = ma.MaskedArray(new_img, mask = ~new_mask.astype(bool))
+        
+
+        else:
+	    img = ma.MaskedArray(image, mask = ~mask.astype(bool))
         
         Nsmallx = int(img.shape[0]/bin_fac)
         Nsmally = int(img.shape[1]/bin_fac)
