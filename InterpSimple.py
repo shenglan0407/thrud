@@ -77,14 +77,14 @@ class InterpSimple:
         '''return a 2d np.array polar image'''
         
         if self.y_centerin_fac:
-            if use_zoom:
+            if self.use_zoom:
                 data_img = zoom(data_img, 1. / self.y_centerin_fac, order=1)
             else:
-                if mask == None:
+                if mask is None:
                     print ("Need mask if using _bin_masked_image")
                     return
 
-                data_img = self._bin_masked_image() 
+                data_img = self._bin_masked_image(data_img, mask, self.y_centerin_fac) 
 
         data = data_img.ravel()
         return data[self.indices_1d]
@@ -98,8 +98,8 @@ class InterpSimple:
             
         else:
 
-            x = ( int(image.shape[0]/bin_fac)+1)  * bin_fac
-            y = ( int(image.shape[1]/bin_fac)+1)  * bin_fac
+            x = int ( ( int(image.shape[0]/bin_fac)+1)  * bin_fac)
+            y = int( ( int(image.shape[1]/bin_fac)+1)  * bin_fac)
             new_img = np.zeros((x,y), dtype = np.float64)
             new_mask = np.zeros((x,y), dtype=np.bool)
             
@@ -108,10 +108,10 @@ class InterpSimple:
             
             img = ma.MaskedArray(new_img, mask = ~new_mask.astype(bool))
         
-        Nsmallx = img.shape[0]/bin_fac
-        Nsmally = img.shape[1]/bin_fac
+        Nsmallx = int(img.shape[0]/bin_fac)
+        Nsmally = int(img.shape[1]/bin_fac)
 
-        binned_img = img.reshape([Nsmallx, bin_fac, Nsmally, bin_fac]).mean(3).mean(1)
+        binned_img = img.reshape([Nsmallx, int(bin_fac), Nsmally, int(bin_fac)]).mean(3).mean(1)
         
         return binned_img.data
 
