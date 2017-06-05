@@ -11,7 +11,8 @@ class InterpSimple:
     def __init__(self, a, b, 
         qRmax, qRmin, 
         nphi, raw_img_shape, 
-        bin_fac=None, 
+        bin_fac=None,
+	new_shape = None, 
         use_zoom = True):
         '''
         Define a polar image with dimensions: (qRmax-qRmin) x nphi
@@ -43,15 +44,29 @@ class InterpSimple:
 
         self.y_centerin_fac = bin_fac
         self.use_zoom = use_zoom
+	
+	try:
+	    assert(~((bin_fac is not None) and (new_shape is not None) ))
+	except AssertionError:
+	    print(" either pass value to bin_fac or new_shape, not both")
+	    sys.exit()
 
-        if bin_fac:
+        if bin_fac is not None: 
             if use_zoom:
                 self.Y, self.X = zoom(np.random.random(raw_img_shape),
                                       1. / bin_fac, order=1).shape
             else:
                 self.Y = int(raw_img_shape[0]/bin_fac)+bool(raw_img_shape[0]%bin_fac)
                 self.X = int(raw_img_shape[1]/bin_fac)+bool(raw_img_shape[1]%bin_fac)
-
+	elif new_shape is not None:
+	    self.Y = new_shape[0]
+	    self.X = new_shape[1]
+	    try:
+	    	assert (raw_img_shape[1]%self.X == 0 and raw_img_shape[0]%self.Y)
+	    except AssertionError:
+		print("both dimensions of new_shape must be integer factors of raw_img_shape")
+		sys.exit()
+	    self.new_shape = new_shape
         else:
             self.X = raw_img_shape[1]  # fast dimension
             self.Y = raw_img_shape[0]  # slow dimension
@@ -89,6 +104,11 @@ class InterpSimple:
         data = data_img.ravel()
         return data[self.indices_1d]
 
+    def nearest_naive_bin(self, data_img):
+	data_img = self._bin_image_naive(data_img, self.y_centerin_fac)
+	data = data_img.ravel()
+        return data[self.indices_1d]
+ 
     def _bin_masked_image(self, image, 
                         mask, bin_fac):
     
@@ -118,6 +138,44 @@ class InterpSimple:
         binned_img = img.reshape([Nsmallx, int(bin_fac), Nsmally, int(bin_fac)]).mean(3).mean(1)
         
         return binned_img.data
+
+
+    def _bin_image_naive(self, image, bin_fac):
+    
+        # check if shape of image are integer multiples of bin_fac
+	if image.shape[0]%bin_fac or image.shape[1]%bin_fac:
+            x = int( self.Y * bin_fac )
+            y = int( self.X * bin_fac )
+            new_img = np.zeros((x,y), dtype = np.float32)
+            
+            new_img[:image.shape[0],:image.shape[1]] = image
+	else:
+	    new_img = image
+        
+        Nsmallx = int(new_img.shape[0]/bin_fac)
+        Nsmally = int(new_img.shape[1]/bin_fac)
+
+        binned_img = new_img.reshape([Nsmallx, int(bin_fac), Nsmally, int(bin_fac)]).mean(3).mean(1)
+        
+        return binned_img
+
+
+#    def _bin_image_naive(self, ndarray):
+#        """
+#        Bins an ndarray in all axes based on the target shape, by averaging
+#        """
+#        if ndarray.ndim != len(self.new_shape):
+#            raise ValueError("Shape mismatch: {} -> {}".format(ndarray.shape,
+#                                                               self.new_shape))
+#        compression_pairs = [(d, c//d) for d, c in zip(self.new_shape,
+#                                                       ndarray.shape)]
+#        flattened = [l for p in compression_pairs for l in p]
+#        
+#	ndarray = ndarray.reshape(flattened)
+#        
+#	for i in range(len(self.new_shape)):
+#            ndarray = ndarray.mean(-1*(i+1))
+#        return ndarray
 
     def set_polar_tree( self, index_query_fname, weighted=True): 
         #self.PT = PolarTree(self.x_center, self.y_center, (self.Y, self.X), offset_pix=offset_pix)
